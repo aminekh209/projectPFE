@@ -1,0 +1,627 @@
+{
+    "actions_globales": [
+        {
+            "description": "Création dossier \"$APP_HOME\"",
+            "categorie": "FICHIER",
+            "type": "mkdir",
+            "contexte": "patch/DB/BO/prepatch.sh"
+        },
+        {
+            "description": "Permission 755 sur \"$APP_HOME\"",
+            "categorie": "PERMISSION",
+            "type": "chmod",
+            "contexte": "patch/DB/BO/prepatch.sh"
+        },
+        {
+            "description": "Permission 750 sur \"$BACKUP_DIR\"",
+            "categorie": "PERMISSION",
+            "type": "chmod",
+            "contexte": "patch/DB/BO/prepatch.sh"
+        },
+        {
+            "description": "Permission 755 sur \"$LOG_DIR\"",
+            "categorie": "PERMISSION",
+            "type": "chmod",
+            "contexte": "patch/DB/BO/prepatch.sh"
+        },
+        {
+            "description": "Permission 755 sur \"$CONFIG_DIR\"",
+            "categorie": "PERMISSION",
+            "type": "chmod",
+            "contexte": "patch/DB/BO/prepatch.sh"
+        },
+        {
+            "description": "Permission 775 sur \"$DATA_DIR\"",
+            "categorie": "PERMISSION",
+            "type": "chmod",
+            "contexte": "patch/DB/BO/prepatch.sh"
+        },
+        {
+            "description": "Lien -sf → \"$APP_HOME\"",
+            "categorie": "FICHIER",
+            "type": "ln",
+            "contexte": "patch/DB/BO/prepatch.sh"
+        },
+        {
+            "description": "Lien -sf → \"$LOG_DIR\"",
+            "categorie": "FICHIER",
+            "type": "ln",
+            "contexte": "patch/DB/BO/prepatch.sh"
+        },
+        {
+            "description": "Extraction archive tar",
+            "categorie": "ARCHIVE",
+            "type": "tar_extract",
+            "contexte": "patch/DB/BO/prepatch.sh"
+        },
+        {
+            "description": "Création -c → \"app-${APP_VERSION}.war\"",
+            "categorie": "ARCHIVE",
+            "type": "zip_create",
+            "contexte": "patch/DB/BO/prepatch.sh"
+        },
+        {
+            "description": "Compression -c",
+            "categorie": "ARCHIVE",
+            "type": "gzip",
+            "contexte": "patch/DB/BO/prepatch.sh"
+        },
+        {
+            "description": "Création -c → \"app-${APP_VERSION}.war.gz\"",
+            "categorie": "ARCHIVE",
+            "type": "zip_create",
+            "contexte": "patch/DB/BO/prepatch.sh"
+        },
+        {
+            "description": "Extraction -c",
+            "categorie": "ARCHIVE",
+            "type": "unzip",
+            "contexte": "patch/DB/BO/prepatch.sh"
+        },
+        {
+            "description": "Décompression -c",
+            "categorie": "ARCHIVE",
+            "type": "gunzip",
+            "contexte": "patch/DB/BO/prepatch.sh"
+        },
+        {
+            "description": "Création \"backup-config.zip\" → \"$CONFIG_DIR\"/*.properties",
+            "categorie": "ARCHIVE",
+            "type": "zip_create",
+            "contexte": "patch/DB/BO/prepatch.sh"
+        },
+        {
+            "description": "Création -o → \"backup-config.zip\"",
+            "categorie": "ARCHIVE",
+            "type": "zip_create",
+            "contexte": "patch/DB/BO/prepatch.sh"
+        },
+        {
+            "description": "Extraction -o",
+            "categorie": "ARCHIVE",
+            "type": "unzip",
+            "contexte": "patch/DB/BO/prepatch.sh"
+        },
+        {
+            "description": "Copie -f → \"$TEMP_DIR/application.properties\"",
+            "categorie": "FICHIER",
+            "type": "cp",
+            "contexte": "patch/DB/BO/prepatch.sh"
+        },
+        {
+            "description": "Copie -f → \"$TEMP_DIR/logback.xml\"",
+            "categorie": "FICHIER",
+            "type": "cp",
+            "contexte": "patch/DB/BO/prepatch.sh"
+        },
+        {
+            "description": "Substitution 's/^#*\\(server\\.port=\\).*/\\18080/' dans \"$CONFIG_DIR/application.properties\"",
+            "categorie": "TEXTE",
+            "type": "sed",
+            "contexte": "patch/DB/BO/prepatch.sh"
+        },
+        {
+            "description": "Substitution 's/^#*\\(database\\.host=\\).*/\\1localhost/' dans \"$CONFIG_DIR/application.properties\"",
+            "categorie": "TEXTE",
+            "type": "sed",
+            "contexte": "patch/DB/BO/prepatch.sh"
+        },
+        {
+            "description": "Substitution 's/^#*\\(database\\.port=\\).*/\\13306/' dans \"$CONFIG_DIR/application.properties\"",
+            "categorie": "TEXTE",
+            "type": "sed",
+            "contexte": "patch/DB/BO/prepatch.sh"
+        },
+        {
+            "description": "Déplacement \"$CONFIG_DIR/application.properties.tmp\" → \"$CONFIG_DIR/application.properties\"",
+            "categorie": "FICHIER",
+            "type": "mv",
+            "contexte": "patch/DB/BO/prepatch.sh"
+        },
+        {
+            "description": "Changement propriétaire appuser:appgroup pour \"$APP_HOME\"",
+            "categorie": "PERMISSION",
+            "type": "chown",
+            "contexte": "patch/DB/BO/prepatch.sh"
+        },
+        {
+            "description": "Permission 755 sur {}",
+            "categorie": "PERMISSION",
+            "type": "chmod",
+            "contexte": "patch/DB/BO/prepatch.sh"
+        },
+        {
+            "description": "Permission 644 sur {}",
+            "categorie": "PERMISSION",
+            "type": "chmod",
+            "contexte": "patch/DB/BO/prepatch.sh"
+        },
+        {
+            "description": "Permission 640 sur {}",
+            "categorie": "PERMISSION",
+            "type": "chmod",
+            "contexte": "patch/DB/BO/prepatch.sh"
+        },
+        {
+            "description": "Permission 4755 sur \"$APP_HOME/bin/setuid-binary\"",
+            "categorie": "PERMISSION",
+            "type": "chmod",
+            "contexte": "patch/DB/BO/prepatch.sh"
+        },
+        {
+            "description": "Permission 2755 sur \"$APP_HOME/bin/setgid-binary\"",
+            "categorie": "PERMISSION",
+            "type": "chmod",
+            "contexte": "patch/DB/BO/prepatch.sh"
+        },
+        {
+            "description": "Arrêt service \"$APP_NAME\"",
+            "categorie": "SERVICE_SYSTEMD",
+            "type": "systemctl_stop",
+            "contexte": "patch/DB/BO/prepatch.sh"
+        },
+        {
+            "description": "Arrêt service \"$APP_NAME\"",
+            "categorie": "SERVICE_SYSV",
+            "type": "service_stop",
+            "contexte": "patch/DB/BO/prepatch.sh"
+        },
+        {
+            "description": "Arrêt service \"mysql\"",
+            "categorie": "SERVICE_SYSTEMD",
+            "type": "systemctl_stop",
+            "contexte": "patch/DB/BO/prepatch.sh"
+        },
+        {
+            "description": "Arrêt service mysql",
+            "categorie": "SERVICE_SYSV",
+            "type": "service_stop",
+            "contexte": "patch/DB/BO/prepatch.sh"
+        },
+        {
+            "description": "Arrêt service \"redis\"",
+            "categorie": "SERVICE_SYSTEMD",
+            "type": "systemctl_stop",
+            "contexte": "patch/DB/BO/prepatch.sh"
+        },
+        {
+            "description": "Arrêt service redis",
+            "categorie": "SERVICE_SYSV",
+            "type": "service_stop",
+            "contexte": "patch/DB/BO/prepatch.sh"
+        },
+        {
+            "description": "Vérification statut \"$APP_NAME\"",
+            "categorie": "SERVICE_SYSTEMD",
+            "type": "systemctl_status",
+            "contexte": "patch/DB/BO/prepatch.sh"
+        },
+        {
+            "description": "Vérification statut \"$APP_NAME\"",
+            "categorie": "SERVICE_SYSV",
+            "type": "service_status",
+            "contexte": "patch/DB/BO/prepatch.sh"
+        },
+        {
+            "description": "Rechargement service \"nginx\"",
+            "categorie": "SERVICE_SYSTEMD",
+            "type": "systemctl_reload",
+            "contexte": "patch/DB/BO/prepatch.sh"
+        },
+        {
+            "description": "Rechargement service nginx",
+            "categorie": "SERVICE_SYSV",
+            "type": "service_reload",
+            "contexte": "patch/DB/BO/prepatch.sh"
+        },
+        {
+            "description": "Démarrage service \"mysql\"",
+            "categorie": "SERVICE_SYSTEMD",
+            "type": "systemctl_start",
+            "contexte": "patch/DB/BO/prepatch.sh"
+        },
+        {
+            "description": "Démarrage service mysql",
+            "categorie": "SERVICE_SYSV",
+            "type": "service_start",
+            "contexte": "patch/DB/BO/prepatch.sh"
+        },
+        {
+            "description": "Démarrage service \"redis\"",
+            "categorie": "SERVICE_SYSTEMD",
+            "type": "systemctl_start",
+            "contexte": "patch/DB/BO/prepatch.sh"
+        },
+        {
+            "description": "Démarrage service redis",
+            "categorie": "SERVICE_SYSV",
+            "type": "service_start",
+            "contexte": "patch/DB/BO/prepatch.sh"
+        },
+        {
+            "description": "Démarrage service \"$APP_NAME\"",
+            "categorie": "SERVICE_SYSTEMD",
+            "type": "systemctl_start",
+            "contexte": "patch/DB/BO/prepatch.sh"
+        },
+        {
+            "description": "Démarrage service \"$APP_NAME\"",
+            "categorie": "SERVICE_SYSV",
+            "type": "service_start",
+            "contexte": "patch/DB/BO/prepatch.sh"
+        },
+        {
+            "description": "Activation service \"$APP_NAME\"",
+            "categorie": "SERVICE_SYSTEMD",
+            "type": "systemctl_enable",
+            "contexte": "patch/DB/BO/prepatch.sh"
+        },
+        {
+            "description": "Activation service \"mysql\"",
+            "categorie": "SERVICE_SYSTEMD",
+            "type": "systemctl_enable",
+            "contexte": "patch/DB/BO/prepatch.sh"
+        },
+        {
+            "description": "Activation service \"redis\"",
+            "categorie": "SERVICE_SYSTEMD",
+            "type": "systemctl_enable",
+            "contexte": "patch/DB/BO/prepatch.sh"
+        },
+        {
+            "description": "Création -9 → \"$BACKUP_DIR/${DB_NAME}_${TIMESTAMP}.sql\"",
+            "categorie": "ARCHIVE",
+            "type": "zip_create",
+            "contexte": "patch/DB/BO/prepatch.sh"
+        },
+        {
+            "description": "Compression -9",
+            "categorie": "ARCHIVE",
+            "type": "gzip",
+            "contexte": "patch/DB/BO/prepatch.sh"
+        },
+        {
+            "description": "Suppression fichiers",
+            "categorie": "FICHIER",
+            "type": "rm",
+            "contexte": "patch/DB/BO/prepatch.sh"
+        },
+        {
+            "description": "Suppression récursive \"$TEMP_DIR\"",
+            "categorie": "FICHIER",
+            "type": "rm_rf",
+            "contexte": "patch/DB/BO/prepatch.sh"
+        },
+        {
+            "description": "Recherche \"$LOG_DIR\" dans *.log",
+            "categorie": "RECHERCHE",
+            "type": "find",
+            "contexte": "patch/DB/BO/prepatch.sh"
+        },
+        {
+            "description": "Recherche \"$BACKUP_DIR\" dans *.sql.gz",
+            "categorie": "RECHERCHE",
+            "type": "find",
+            "contexte": "patch/DB/BO/prepatch.sh"
+        },
+        {
+            "description": "Compression \"$report_file\"",
+            "categorie": "ARCHIVE",
+            "type": "gzip",
+            "contexte": "patch/DB/BO/prepatch.sh"
+        }
+    ],
+    "actions_par_fichier": [
+        {
+            "fichier": "patch/DB/BO/prepatch.sh",
+            "actions": [
+                {
+                    "description": "Création dossier \"$APP_HOME\"",
+                    "categorie": "FICHIER",
+                    "type": "mkdir"
+                },
+                {
+                    "description": "Permission 755 sur \"$APP_HOME\"",
+                    "categorie": "PERMISSION",
+                    "type": "chmod"
+                },
+                {
+                    "description": "Permission 750 sur \"$BACKUP_DIR\"",
+                    "categorie": "PERMISSION",
+                    "type": "chmod"
+                },
+                {
+                    "description": "Permission 755 sur \"$LOG_DIR\"",
+                    "categorie": "PERMISSION",
+                    "type": "chmod"
+                },
+                {
+                    "description": "Permission 755 sur \"$CONFIG_DIR\"",
+                    "categorie": "PERMISSION",
+                    "type": "chmod"
+                },
+                {
+                    "description": "Permission 775 sur \"$DATA_DIR\"",
+                    "categorie": "PERMISSION",
+                    "type": "chmod"
+                },
+                {
+                    "description": "Lien -sf → \"$APP_HOME\"",
+                    "categorie": "FICHIER",
+                    "type": "ln"
+                },
+                {
+                    "description": "Lien -sf → \"$LOG_DIR\"",
+                    "categorie": "FICHIER",
+                    "type": "ln"
+                },
+                {
+                    "description": "Extraction archive tar",
+                    "categorie": "ARCHIVE",
+                    "type": "tar_extract"
+                },
+                {
+                    "description": "Création -c → \"app-${APP_VERSION}.war\"",
+                    "categorie": "ARCHIVE",
+                    "type": "zip_create"
+                },
+                {
+                    "description": "Compression -c",
+                    "categorie": "ARCHIVE",
+                    "type": "gzip"
+                },
+                {
+                    "description": "Création -c → \"app-${APP_VERSION}.war.gz\"",
+                    "categorie": "ARCHIVE",
+                    "type": "zip_create"
+                },
+                {
+                    "description": "Extraction -c",
+                    "categorie": "ARCHIVE",
+                    "type": "unzip"
+                },
+                {
+                    "description": "Décompression -c",
+                    "categorie": "ARCHIVE",
+                    "type": "gunzip"
+                },
+                {
+                    "description": "Création \"backup-config.zip\" → \"$CONFIG_DIR\"/*.properties",
+                    "categorie": "ARCHIVE",
+                    "type": "zip_create"
+                },
+                {
+                    "description": "Création -o → \"backup-config.zip\"",
+                    "categorie": "ARCHIVE",
+                    "type": "zip_create"
+                },
+                {
+                    "description": "Extraction -o",
+                    "categorie": "ARCHIVE",
+                    "type": "unzip"
+                },
+                {
+                    "description": "Copie -f → \"$TEMP_DIR/application.properties\"",
+                    "categorie": "FICHIER",
+                    "type": "cp"
+                },
+                {
+                    "description": "Copie -f → \"$TEMP_DIR/logback.xml\"",
+                    "categorie": "FICHIER",
+                    "type": "cp"
+                },
+                {
+                    "description": "Substitution 's/^#*\\(server\\.port=\\).*/\\18080/' dans \"$CONFIG_DIR/application.properties\"",
+                    "categorie": "TEXTE",
+                    "type": "sed"
+                },
+                {
+                    "description": "Substitution 's/^#*\\(database\\.host=\\).*/\\1localhost/' dans \"$CONFIG_DIR/application.properties\"",
+                    "categorie": "TEXTE",
+                    "type": "sed"
+                },
+                {
+                    "description": "Substitution 's/^#*\\(database\\.port=\\).*/\\13306/' dans \"$CONFIG_DIR/application.properties\"",
+                    "categorie": "TEXTE",
+                    "type": "sed"
+                },
+                {
+                    "description": "Déplacement \"$CONFIG_DIR/application.properties.tmp\" → \"$CONFIG_DIR/application.properties\"",
+                    "categorie": "FICHIER",
+                    "type": "mv"
+                },
+                {
+                    "description": "Changement propriétaire appuser:appgroup pour \"$APP_HOME\"",
+                    "categorie": "PERMISSION",
+                    "type": "chown"
+                },
+                {
+                    "description": "Permission 755 sur {}",
+                    "categorie": "PERMISSION",
+                    "type": "chmod"
+                },
+                {
+                    "description": "Permission 644 sur {}",
+                    "categorie": "PERMISSION",
+                    "type": "chmod"
+                },
+                {
+                    "description": "Permission 640 sur {}",
+                    "categorie": "PERMISSION",
+                    "type": "chmod"
+                },
+                {
+                    "description": "Permission 4755 sur \"$APP_HOME/bin/setuid-binary\"",
+                    "categorie": "PERMISSION",
+                    "type": "chmod"
+                },
+                {
+                    "description": "Permission 2755 sur \"$APP_HOME/bin/setgid-binary\"",
+                    "categorie": "PERMISSION",
+                    "type": "chmod"
+                },
+                {
+                    "description": "Arrêt service \"$APP_NAME\"",
+                    "categorie": "SERVICE_SYSTEMD",
+                    "type": "systemctl_stop"
+                },
+                {
+                    "description": "Arrêt service \"$APP_NAME\"",
+                    "categorie": "SERVICE_SYSV",
+                    "type": "service_stop"
+                },
+                {
+                    "description": "Arrêt service \"mysql\"",
+                    "categorie": "SERVICE_SYSTEMD",
+                    "type": "systemctl_stop"
+                },
+                {
+                    "description": "Arrêt service mysql",
+                    "categorie": "SERVICE_SYSV",
+                    "type": "service_stop"
+                },
+                {
+                    "description": "Arrêt service \"redis\"",
+                    "categorie": "SERVICE_SYSTEMD",
+                    "type": "systemctl_stop"
+                },
+                {
+                    "description": "Arrêt service redis",
+                    "categorie": "SERVICE_SYSV",
+                    "type": "service_stop"
+                },
+                {
+                    "description": "Vérification statut \"$APP_NAME\"",
+                    "categorie": "SERVICE_SYSTEMD",
+                    "type": "systemctl_status"
+                },
+                {
+                    "description": "Vérification statut \"$APP_NAME\"",
+                    "categorie": "SERVICE_SYSV",
+                    "type": "service_status"
+                },
+                {
+                    "description": "Rechargement service \"nginx\"",
+                    "categorie": "SERVICE_SYSTEMD",
+                    "type": "systemctl_reload"
+                },
+                {
+                    "description": "Rechargement service nginx",
+                    "categorie": "SERVICE_SYSV",
+                    "type": "service_reload"
+                },
+                {
+                    "description": "Démarrage service \"mysql\"",
+                    "categorie": "SERVICE_SYSTEMD",
+                    "type": "systemctl_start"
+                },
+                {
+                    "description": "Démarrage service mysql",
+                    "categorie": "SERVICE_SYSV",
+                    "type": "service_start"
+                },
+                {
+                    "description": "Démarrage service \"redis\"",
+                    "categorie": "SERVICE_SYSTEMD",
+                    "type": "systemctl_start"
+                },
+                {
+                    "description": "Démarrage service redis",
+                    "categorie": "SERVICE_SYSV",
+                    "type": "service_start"
+                },
+                {
+                    "description": "Démarrage service \"$APP_NAME\"",
+                    "categorie": "SERVICE_SYSTEMD",
+                    "type": "systemctl_start"
+                },
+                {
+                    "description": "Démarrage service \"$APP_NAME\"",
+                    "categorie": "SERVICE_SYSV",
+                    "type": "service_start"
+                },
+                {
+                    "description": "Activation service \"$APP_NAME\"",
+                    "categorie": "SERVICE_SYSTEMD",
+                    "type": "systemctl_enable"
+                },
+                {
+                    "description": "Activation service \"mysql\"",
+                    "categorie": "SERVICE_SYSTEMD",
+                    "type": "systemctl_enable"
+                },
+                {
+                    "description": "Activation service \"redis\"",
+                    "categorie": "SERVICE_SYSTEMD",
+                    "type": "systemctl_enable"
+                },
+                {
+                    "description": "Création -9 → \"$BACKUP_DIR/${DB_NAME}_${TIMESTAMP}.sql\"",
+                    "categorie": "ARCHIVE",
+                    "type": "zip_create"
+                },
+                {
+                    "description": "Compression -9",
+                    "categorie": "ARCHIVE",
+                    "type": "gzip"
+                },
+                {
+                    "description": "Suppression fichiers",
+                    "categorie": "FICHIER",
+                    "type": "rm"
+                },
+                {
+                    "description": "Suppression récursive \"$TEMP_DIR\"",
+                    "categorie": "FICHIER",
+                    "type": "rm_rf"
+                },
+                {
+                    "description": "Recherche \"$LOG_DIR\" dans *.log",
+                    "categorie": "RECHERCHE",
+                    "type": "find"
+                },
+                {
+                    "description": "Recherche \"$BACKUP_DIR\" dans *.sql.gz",
+                    "categorie": "RECHERCHE",
+                    "type": "find"
+                },
+                {
+                    "description": "Compression \"$report_file\"",
+                    "categorie": "ARCHIVE",
+                    "type": "gzip"
+                }
+            ]
+        }
+    ],
+    "types_detectes": [],
+    "nombre_actions": 55,
+    "statistiques_categories": {
+        "FICHIER": 8,
+        "PERMISSION": 11,
+        "ARCHIVE": 12,
+        "TEXTE": 3,
+        "SERVICE_SYSTEMD": 11,
+        "SERVICE_SYSV": 8,
+        "RECHERCHE": 2
+    }
+}
