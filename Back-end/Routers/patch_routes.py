@@ -38,22 +38,20 @@ def get_environments_by_client(client_id: int, db: Session = Depends(get_db)):
 
 @router.post("/analyser")
 async def analyser_patch(file: UploadFile = File(...)):
-    """
-    Analyse complète d'un fichier patch ZIP
-    """
+    
     if not file.filename.endswith('.zip'):
         raise HTTPException(status_code=400, detail="Le fichier doit être un ZIP")
     
     try:
         content = await file.read()
         
-        # Création fichier temporaire pour FileScanner
+        
         with tempfile.NamedTemporaryFile(delete=False, suffix='.zip') as tmp_file:
             tmp_file.write(content)
             tmp_path = tmp_file.name
         
         try:
-            # Appels aux services uniquement
+            
             structure = FileScanner.scanner_fichiers_zip(tmp_path)
             actions = await ActionDetector.detecter_actions_dans_zip(content)
             
@@ -72,9 +70,7 @@ async def analyser_patch(file: UploadFile = File(...)):
 
 @router.post("/preview")
 async def preview_patch(file: UploadFile = File(...)):
-    """
-    Prévisualisation rapide du patch
-    """
+   
     if not file.filename.endswith('.zip'):
         raise HTTPException(status_code=400, detail="Le fichier doit être un ZIP")
     
@@ -180,37 +176,40 @@ async def create_patch_endpoint(
     db: Session = Depends(get_db)
 ):
     try:
-        # 1. Sauvegarder le fichier ZIP sur le serveur
-        # Assurez-vous que le dossier 'uploads/patches' existe
+        # 1. Sauvegarde définitive (Ceci ne s'exécute QUE quand on clique sur Save !)
         os.makedirs("uploads/patches", exist_ok=True)
         file_location = f"uploads/patches/{file.filename}"
         
         with open(file_location, "wb") as buffer:
             shutil.copyfileobj(file.file, buffer)
-        
-        # On crée un dossier d'extraction qui porte le nom du fichier (sans le .zip)
+
+        # 2. Extraction du ZIP
         nom_dossier = file.filename.replace('.zip', '')
         extraction_path = f"uploads/patches/extracted/{nom_dossier}"
         os.makedirs(extraction_path, exist_ok=True)
         
-        # On extrait tout le contenu du ZIP dans ce nouveau dossier
         with zipfile.ZipFile(file_location, 'r') as zip_ref:
             zip_ref.extractall(extraction_path)
-            
-        print(f"✅ Fichier extrait avec succès dans : {extraction_path}")
-        # 2. Transformer la chaîne JSON envoyée par React en objets Pydantic
+
+        # 3. Récupération du chemin de base absolu
+        base_path = os.path.abspath(extraction_path).replace('\\', '/')
+
+        # 4. Conversion JSON -> Python
         parsed_data = json.loads(patch_data)
         validated_patches = [PatchCreate(**item) for item in parsed_data]
         parsed_analysis = json.loads(analysis_data) if analysis_data else None
-        # 3. Appeler le service pour sauvegarder dans la Base de données
-        # C'EST ICI QUE SE TROUVAIT L'ERREUR : on utilise patch_service_instance (en minuscules)
+        
+        print(f"\n DÉBOGAGE : Le serveur a reçu {len(validated_patches)} configuration(s) à sauvegarder !\n")
+        
+        
         saved_patches = patch_service_instance.save_bulk_patches(
             db=db, 
             patches_data=validated_patches, 
-            zip_path=file_location,          # Pour calculer la taille
-            extracted_path=extraction_path,  # Pour stocker en base de données
+            zip_path=file_location,          
+            extracted_path=base_path, 
             analysis_data=parsed_analysis
         )
+        
         return {
             "message": "Patches sauvegardés avec succès",
             "count": len(saved_patches),
@@ -218,6 +217,5 @@ async def create_patch_endpoint(
         }
 
     except Exception as e:
-        # J'ajoute le print pour que si une autre erreur survient, elle s'affiche en clair dans votre terminal
-        print(f"\n🔥 ERREUR D'INSERTION : {str(e)}\n")
+        print(f"\n ERREUR D'INSERTION : {str(e)}\n")
         raise HTTPException(status_code=500, detail=f"Erreur serveur : {str(e)}")

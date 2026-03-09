@@ -5,9 +5,7 @@ from pathlib import Path
 import re
 
 class FileScanner:
-    """
-    Scanner de fichiers pour analyser la structure et le contenu des patches
-    """
+    
     
     # Extensions par catégorie
     EXTENSIONS = {
@@ -23,9 +21,7 @@ class FileScanner:
     
     @staticmethod
     def scanner_fichiers_zip(zip_path: str) -> Dict[str, Any]:
-        """
-        Scanner un fichier ZIP et retourner sa structure complète
-        """
+       
         resultat = {
             'nom': os.path.basename(zip_path),
             'taille': os.path.getsize(zip_path),
@@ -115,9 +111,7 @@ class FileScanner:
     
     @staticmethod
     def _determiner_type(extension: str) -> str:
-        """
-        Déterminer le type de fichier
-        """
+       
         if extension in ['.sh', '.bash', '.py', '.pl', '.rb', '.php', '.js']:
             return 'script'
         elif extension in ['.so', '.dll', '.bin', '.o', '.a', '.exe']:

@@ -52,8 +52,22 @@ export default function CreationPatch() {
   // État pour la modale de succès
   const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
 
+  // 🔥 NOUVEAUX ÉTATS POUR LA MODALE D'ALERTE UNIVERSELLE
+  const [isAlertModalOpen, setIsAlertModalOpen] = useState(false);
+  const [alertConfig, setAlertConfig] = useState({ 
+    message: '', 
+    title: 'Error', 
+    type: 'error' // 'error' ou 'warning'
+  });
+
   // Types de patches disponibles depuis l'API
   const [typesPatches, setTypesPatches] = useState([]);
+
+  // Fonction utilitaire pour appeler la modale facilement
+  const showAlert = (message, title = 'Error', type = 'error') => {
+    setAlertConfig({ message, title, type });
+    setIsAlertModalOpen(true);
+  };
 
   // 1. Chargement des types de patches depuis l'API
   useEffect(() => {
@@ -70,6 +84,7 @@ export default function CreationPatch() {
     
     fetchTypesPatches();
   }, []);
+  
   useEffect(() => {
     const fetchServers = async () => {
       try {
@@ -85,12 +100,12 @@ export default function CreationPatch() {
     fetchServers();
   }, []);
 
-  // 🔥 LOGIQUE DE DÉTECTION : On cherche le serveur qui correspond aux sélections actuelles
-    const serveurCible = servers.find(s => 
-      s.client_id === parseInt(clientSelectionne) && 
-      s.environment_id === parseInt(environnementSelectionne) && 
-      s.server_type === typeEnvironnement
-    );
+  // LOGIQUE DE DÉTECTION : On cherche le serveur qui correspond aux sélections actuelles
+  const serveurCible = servers.find(s => 
+    s.client_id === parseInt(clientSelectionne) && 
+    s.environment_id === parseInt(environnementSelectionne) && 
+    s.server_type === typeEnvironnement
+  );
 
   // 2. Chargement des clients depuis la base de données
   useEffect(() => {
@@ -162,13 +177,12 @@ export default function CreationPatch() {
       const formData = new FormData();
       formData.append('file', file);
       
-      // On déclare l'intervalle en dehors du try pour pouvoir l'arrêter en cas d'erreur
       let interval; 
       
       try {
         interval = setInterval(() => {
           setProgressUpload(prev => {
-            if (prev >= 90) return 90; // Bloque à 90% en attendant la réponse du serveur
+            if (prev >= 90) return 90; 
             return prev + 10;
           });
         }, 200);
@@ -195,28 +209,28 @@ export default function CreationPatch() {
         
       } catch (error) {
         console.error('Erreur upload:', error);
-        clearInterval(interval); // ✅ On arrête l'animation si le serveur plante !
+        clearInterval(interval); 
         setError(error.message);
         setIsUploading(false);
         setFichierZip(null);
         setProgressUpload(0);
       }
     } else {
-      alert('Please select a valid ZIP file.');
+      // ✅ REMPLACEMENT ALERTE
+      showAlert('Please select a valid ZIP file (.zip only).', 'Invalid Format', 'warning');
     }
-    
   };
-  
-   
-  // Ajouter une configuration (Sans le serveur_id, le backend s'en charge !)
+
   const ajouterConfiguration = () => {
     if (!clientSelectionne || !environnementSelectionne || !typeEnvironnement || !typeComposant || !fichierZip) {
-      alert('Please complete all selections and upload a ZIP file.');
+      // ✅ REMPLACEMENT ALERTE
+      showAlert('Please complete all selections and upload a ZIP file before adding.', 'Missing Information', 'warning');
       return;
     }
 
     if (nombrePatches >= 10) {
-      alert('You have reached the maximum limit of 10 patches.');
+      // ✅ REMPLACEMENT ALERTE
+      showAlert('You have reached the maximum limit of 10 patches per configuration.', 'Limit Reached', 'warning');
       return;
     }
 
@@ -252,11 +266,14 @@ export default function CreationPatch() {
         nouveauTableau[config.client] = {};
       }
       
-      const countActuel = nouveauTableau[config.client][config.type]?.count || 0;
+      const cleUnique = `${config.type}_${config.composant}`;
+      
+      const countActuel = nouveauTableau[config.client][cleUnique]?.count || 0;
 
       nouveauTableau[config.client] = {
         ...nouveauTableau[config.client],
-        [config.type]: {
+        [cleUnique]: {
+          type: config.type, 
           composant: config.composant,
           zipName: config.zipName,
           clientId: config.clientId,
@@ -377,7 +394,8 @@ export default function CreationPatch() {
       
     } catch (err) {
       console.error('Report error:', err);
-      alert('Error while generating the report:: ' + err.message);
+      // ✅ REMPLACEMENT ALERTE
+      showAlert(`Error while generating the report: ${err.message}`, 'Report Generation Error', 'error');
     } finally {
       setLoading(false);
     }
@@ -399,8 +417,8 @@ export default function CreationPatch() {
           file_name: info.zipName,
           client_id: parseInt(info.clientId),
           environment_id: parseInt(info.environnementId),
-          sserver_id: info.serverId ? parseInt(info.serverId) : null, 
-          patch_type: type,
+          server_id: info.serverId ? parseInt(info.serverId) : null, 
+          patch_type: info.type,
           component: info.composant,
           duplication_count: info.count,
           status: "PENDING",
@@ -441,7 +459,8 @@ export default function CreationPatch() {
 
     } catch (err) {
       console.error("Save error:", err);
-      alert(err.message); 
+      // ✅ REMPLACEMENT ALERTE
+      showAlert(err.message, 'Save Error', 'error'); 
     } finally {
       setLoading(false);
     }
@@ -817,7 +836,7 @@ export default function CreationPatch() {
                     )}
                   </div>
 
-                  <div className="p-4 bg-slate-50 border-t border-slate-200">
+                  {/* <div className="p-4 bg-slate-50 border-t border-slate-200">
                     <button
                       type="button"
                       onClick={genererRapport}
@@ -827,7 +846,7 @@ export default function CreationPatch() {
                       <FileText className="w-4 h-4" />
                       Generate a detailed report
                     </button>
-                  </div>
+                  </div> */}
                 </motion.div>
               )}
             </AnimatePresence>
@@ -915,6 +934,7 @@ export default function CreationPatch() {
                 </select>
               </div>
             </div>
+            
             {/* === DÉBUT : NOUVELLE ZONE AFFICHAGE SERVEUR === */}
             <div className={`mb-6 p-4 rounded-xl border-2 transition-all duration-300 flex items-center justify-between ${serveurCible ? 'bg-indigo-50/50 border-indigo-200' : 'bg-slate-50 border-slate-100'}`}>
               <div className="flex items-center gap-4">
@@ -924,7 +944,6 @@ export default function CreationPatch() {
                 <div>
                   <p className="text-[10px] font-extrabold text-slate-400 uppercase tracking-widest mb-1">Assigned execution server</p>
                   
-                  {/* Conditions d'affichage */}
                   {clientSelectionne && environnementSelectionne && typeEnvironnement ? (
                     serveurCible ? (
                       <p className="text-sm font-bold text-indigo-950">
@@ -941,6 +960,7 @@ export default function CreationPatch() {
               {serveurCible && <CheckCircle className="w-7 h-7 text-indigo-500" />}
             </div>
             {/* === FIN : NOUVELLE ZONE AFFICHAGE SERVEUR === */}
+            
             {!fichierZip && (
               <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-lg flex items-center gap-2">
                 <AlertTriangle className="w-5 h-5 text-amber-500" />
@@ -1054,46 +1074,55 @@ export default function CreationPatch() {
                 </thead>
                 <tbody>
                   {Object.entries(tableauClients).map(([client, types]) => (
-                    <tr key={client} className="border-b border-slate-100 hover:bg-slate-50">
+                   <tr key={client} className="border-b border-slate-100 hover:bg-slate-50">
                       <td className="py-3 px-4 font-medium text-slate-800">{client}</td>
+                      
+                      {/* Colonne DB */}
                       <td className="py-3 px-4">
-                        {types.DB && (
-                          <span className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-700 rounded text-sm">
-                            {getComposantIcon(types.DB.composant)} {types.DB.composant}
-                            {types.DB.count > 1 && <span className="ml-1 font-bold text-xs bg-blue-200 px-1.5 py-0.5 rounded-full">x{types.DB.count}</span>}
+                        {Object.values(types).filter(t => t.type === 'DB').map((info, idx) => (
+                          <span key={idx} className="inline-flex items-center gap-1 px-2 py-1 bg-blue-100 text-blue-700 rounded text-sm mr-2 mb-1">
+                            {getComposantIcon(info.composant)} {info.composant}
+                            {info.count > 1 && <span className="ml-1 font-bold text-xs bg-blue-200 px-1.5 py-0.5 rounded-full">x{info.count}</span>}
                           </span>
-                        )}
+                        ))}
                       </td>
+
+                      {/* Colonne UNIX */}
                       <td className="py-3 px-4">
-                        {types.UNIX && (
-                          <span className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 rounded text-sm">
-                            {getComposantIcon(types.UNIX.composant)} {types.UNIX.composant}
-                            {types.UNIX.count > 1 && <span className="ml-1 font-bold text-xs bg-green-200 px-1.5 py-0.5 rounded-full">x{types.UNIX.count}</span>}
+                        {Object.values(types).filter(t => t.type === 'UNIX').map((info, idx) => (
+                          <span key={idx} className="inline-flex items-center gap-1 px-2 py-1 bg-green-100 text-green-700 rounded text-sm mr-2 mb-1">
+                            {getComposantIcon(info.composant)} {info.composant}
+                            {info.count > 1 && <span className="ml-1 font-bold text-xs bg-green-200 px-1.5 py-0.5 rounded-full">x{info.count}</span>}
                           </span>
-                        )}
+                        ))}
                       </td>
+
+                      {/* Colonne WEB */}
                       <td className="py-3 px-4">
-                        {types.WEB && (
-                          <span className="inline-flex items-center gap-1 px-2 py-1 bg-purple-100 text-purple-700 rounded text-sm">
-                            {getComposantIcon(types.WEB.composant)} {types.WEB.composant}
-                            {types.WEB.count > 1 && <span className="ml-1 font-bold text-xs bg-purple-200 px-1.5 py-0.5 rounded-full">x{types.WEB.count}</span>}
+                        {Object.values(types).filter(t => t.type === 'WEB').map((info, idx) => (
+                          <span key={idx} className="inline-flex items-center gap-1 px-2 py-1 bg-purple-100 text-purple-700 rounded text-sm mr-2 mb-1">
+                            {getComposantIcon(info.composant)} {info.composant}
+                            {info.count > 1 && <span className="ml-1 font-bold text-xs bg-purple-200 px-1.5 py-0.5 rounded-full">x{info.count}</span>}
                           </span>
-                        )}
+                        ))}
                       </td>
+
+                      {/* Colonne ZIP */}
                       <td className="py-3 px-4">
-                        {types.DB?.zipName || types.UNIX?.zipName || types.WEB?.zipName ? (
+                        {Object.values(types).length > 0 ? (
                           <span className="inline-flex items-center gap-1 px-2 py-1 bg-slate-100 text-slate-700 rounded text-sm">
                             <FileText className="w-3 h-3" />
-                            {types.DB?.zipName || types.UNIX?.zipName || types.WEB?.zipName}
+                            {Object.values(types)[0].zipName}
                           </span>
                         ) : <span className="text-slate-400 text-sm">-</span>}
                       </td>
+
+                      {/* Bouton Corbeille */}
                       <td className="py-3 px-4 text-center">
                         <button
                           type="button"
                           onClick={() => demanderSuppressionClient(client)}
                           className="p-2 text-red-500 hover:bg-red-50 hover:text-red-700 rounded-lg transition-colors"
-                          title="Supprimer ce client du récapitulatif"
                         >
                           <Trash2 className="w-5 h-5 mx-auto" />
                         </button>
@@ -1164,9 +1193,9 @@ export default function CreationPatch() {
                       }}
                       className="w-full px-3 py-2 bg-white border border-slate-200 rounded-lg focus:ring-2 focus:ring-red-500/20 focus:border-red-500 transition-all appearance-none"
                     >
-                      {Object.entries(tableauClients[clientToDelete]).map(([type, info]) => (
-                        <option key={type} value={type}>
-                          {type} (Current quantity : {info.count})
+                      {Object.entries(tableauClients[clientToDelete]).map(([cleUnique, info]) => (
+                        <option key={cleUnique} value={cleUnique}>
+                          {info.type} - {info.composant} (Current quantity : {info.count})
                         </option>
                       ))}
                     </select>
@@ -1253,6 +1282,59 @@ export default function CreationPatch() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      {/* 🔥 MODALE D'ALERTE UNIVERSELLE (Erreurs & Avertissements) */}
+      <AnimatePresence>
+        {isAlertModalOpen && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm"
+          >
+            <motion.div
+              initial={{ scale: 0.95, opacity: 0, y: 20 }}
+              animate={{ scale: 1, opacity: 1, y: 0 }}
+              exit={{ scale: 0.95, opacity: 0, y: 20 }}
+              className="bg-white rounded-2xl shadow-xl w-full max-w-md overflow-hidden"
+            >
+              <div className="p-6">
+                <div className={`w-16 h-16 mx-auto rounded-full flex items-center justify-center mb-4 ${
+                  alertConfig.type === 'error' ? 'bg-red-100' : 'bg-amber-100'
+                }`}>
+                  {alertConfig.type === 'error' ? (
+                    <AlertCircle className="w-8 h-8 text-red-600" />
+                  ) : (
+                    <AlertTriangle className="w-8 h-8 text-amber-500" />
+                  )}
+                </div>
+                
+                <h3 className="text-xl font-bold text-center text-slate-800 mb-2">
+                  {alertConfig.title}
+                </h3>
+                
+                {/* whitespace-pre-wrap conserve les retours à la ligne natifs envoyés par le backend */}
+                <p className="text-center text-slate-600 mb-6 whitespace-pre-wrap">
+                  {alertConfig.message}
+                </p>
+                
+                <button
+                  type="button"
+                  onClick={() => setIsAlertModalOpen(false)}
+                  className={`w-full px-4 py-3 text-white font-medium rounded-lg transition-colors ${
+                    alertConfig.type === 'error' 
+                      ? 'bg-red-600 hover:bg-red-700' 
+                      : 'bg-amber-500 hover:bg-amber-600'
+                  }`}
+                >
+                  Close
+                </button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
     </div>
   );
 }

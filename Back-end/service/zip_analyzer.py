@@ -10,9 +10,6 @@ from .file_scanner import FileScanner
 from .action_detector import ActionDetector
 
 class ZipAnalyzer:
-    """
-    Analyseur principal de fichiers ZIP
-    """
     
     def __init__(self):
         self.file_scanner = FileScanner()
@@ -20,108 +17,115 @@ class ZipAnalyzer:
     
     async def analyser_zip(self, file: UploadFile) -> Dict[str, Any]:
         """
-        Analyser complètement un fichier ZIP uploadé
+        Completely analyze an uploaded ZIP file
         """
-        # Sauvegarder temporairement le fichier
-        contenu = await file.read()
+        # Temporarily save the file content in memory
+        file_content = await file.read()
         
-        # Calculer le hash
-        hash_fichier = hashlib.sha256(contenu).hexdigest()
+        # Calculate the SHA-256 hash for file integrity
+        file_hash = hashlib.sha256(file_content).hexdigest()
         
-        # Sauvegarder dans un fichier temporaire
+        # Save to a temporary file for the FileScanner
         with tempfile.NamedTemporaryFile(delete=False, suffix='.zip') as tmp_file:
-            tmp_file.write(contenu)
+            tmp_file.write(file_content)
             tmp_path = tmp_file.name
         
         try:
-            # Scanner la structure
-            structure = FileScanner.scanner_fichiers_zip(tmp_path)
+            # Scan the physical structure of the ZIP
+            structure_data = FileScanner.scanner_fichiers_zip(tmp_path)
             
-            # Détecter les actions
-            actions = await ActionDetector.detecter_actions_dans_zip(contenu)
+            # Detect actions and commands inside the files
+            actions_data = await ActionDetector.detecter_actions_dans_zip(file_content)
             
-            # Analyser la compatibilité
-            compatibilite = self._analyser_compatibilite(structure, actions)
+            # Analyze compatibility and compliance
+            compatibility_data = self._analyser_compatibilite(structure_data, actions_data)
             
-            # Générer le rapport d'analyse
-            rapport = self._generer_rapport_analyse(
+            # Generate the final analysis report
+            report = self._generer_rapport_analyse(
                 file.filename,
-                structure,
-                actions,
-                compatibilite,
-                hash_fichier
+                structure_data,
+                actions_data,
+                compatibility_data,
+                file_hash
             )
             
-            return rapport
+            return report
             
         finally:
-            # Nettoyer le fichier temporaire
-            os.unlink(tmp_path)
+            # Clean up the temporary file to free up disk space
+            if os.path.exists(tmp_path):
+                os.unlink(tmp_path)
     
     def _analyser_compatibilite(self, structure: Dict, actions: Dict) -> Dict[str, Any]:
         """
-        Analyser la compatibilité du patch
+        Analyze the compatibility and requirements of the patch
         """
-        types_patch = actions.get('types_detectes', [])
+        patch_types = actions.get('types_detectes', [])
         
-        # Vérifier les prérequis
-        prepatch_requis = any('prepatch' in f['nom'] for f in structure['fichiers'])
-        postpatch_requis = any('postpatch' in f['nom'] for f in structure['fichiers'])
+        # Check prerequisites (Case-insensitive check for prepatch/postpatch)
+        prepatch_required = any('prepatch' in str(f.get('nom', '')).lower() for f in structure.get('fichiers', []))
+        postpatch_required = any('postpatch' in str(f.get('nom', '')).lower() for f in structure.get('fichiers', []))
         
-        # Évaluer le risque
-        niveau_risque = self._evaluer_niveau_risque(actions.get('actions_globales', []))
+        # Evaluate the risk level based on the detected actions
+        risk_level = self._evaluer_niveau_risque(actions.get('actions_globales', []))
         
-        # Vérifier la structure UNIX
-        structure_unix_complete = self._verifier_structure_unix(structure)
+        # Verify if the UNIX structure meets the standard requirements
+        complete_unix_structure = self._verifier_structure_unix(structure)
         
+        # Dictionary keys remain in French to maintain Frontend compatibility
         return {
-            'types_patch': types_patch,
-            'prepatch_requis': prepatch_requis,
-            'postpatch_requis': postpatch_requis,
-            'niveau_risque': niveau_risque,
-            'structure_unix_complete': structure_unix_complete,
-            'compatible': len(types_patch) > 0
+            'types_patch': patch_types,
+            'prepatch_requis': prepatch_required,
+            'postpatch_requis': postpatch_required,
+            'niveau_risque': risk_level,
+            'structure_unix_complete': complete_unix_structure,
+            'compatible': len(patch_types) > 0
         }
     
-    def _evaluer_niveau_risque(self, actions: List[str]) -> str:
+    def _evaluer_niveau_risque(self, actions: List[Dict]) -> str:
         """
-        Évaluer le niveau de risque des actions
+        Evaluate the risk level of the detected actions
         """
-        actions_risque_eleve = ['DROP', 'DELETE', 'rm ', 'stop']
-        actions_risque_moyen = ['ALTER', 'UPDATE', 'chmod', 'restart']
+        high_risk_keywords = ['DROP', 'DELETE', 'rm ', 'stop']
+        medium_risk_keywords = ['ALTER', 'UPDATE', 'chmod', 'restart']
         
-        for action in actions:
-            if any(risque in action for risque in actions_risque_eleve):
-                return 'élevé'
-            if any(risque in action for risque in actions_risque_moyen):
-                return 'moyen'
+        for action_obj in actions:
+            # Safely extract the description to check for risk keywords
+            action_text = str(action_obj.get('description', '')).upper()
+            
+            if any(risk.upper() in action_text for risk in high_risk_keywords):
+                return 'high' # Élevé
+            if any(risk.upper() in action_text for risk in medium_risk_keywords):
+                return 'medium' # Moyen
         
-        return 'faible'
+        return 'low' # Faible
     
     def _verifier_structure_unix(self, structure: Dict) -> bool:
         """
-        Vérifier si la structure UNIX est complète
+        Verify if the UNIX directory structure is complete
         """
-        dossiers = structure.get('dossiers', [])
-        requis = ['bin', 'lib', 'ctl']
+        folders = structure.get('dossiers', [])
+        required_folders = ['bin', 'lib', 'ctl']
         
-        presents = []
-        for dossier in dossiers:
-            for r in requis:
-                if r in dossier:
-                    presents.append(r)
+        present_folders = []
+        for folder in folders:
+            for req in required_folders:
+                if req in folder:
+                    present_folders.append(req)
         
-        return len(set(presents)) >= 3
+        # Check if we found at least 3 distinct required folders
+        return len(set(present_folders)) >= 3
     
-    def _generer_rapport_analyse(self, nom_fichier: str, structure: Dict, 
-                                actions: Dict, compatibilite: Dict, 
-                                hash_fichier: str) -> Dict[str, Any]:
+    def _generer_rapport_analyse(self, filename: str, structure: Dict, 
+                                actions: Dict, compatibility: Dict, 
+                                file_hash: str) -> Dict[str, Any]:
         """
-        Générer le rapport d'analyse complet
+        Generate the complete analysis report dictionary
         """
+        # Dictionary keys remain in French to maintain Frontend compatibility
         return {
-            'nom_fichier': nom_fichier,
-            'hash': hash_fichier,
+            'nom_fichier': filename,
+            'hash': file_hash,
             'taille': structure['taille'],
             'statistiques': structure['statistiques'],
             'types_detectes': actions['types_detectes'],
@@ -130,31 +134,31 @@ class ZipAnalyzer:
                 'par_fichier': actions['actions_par_fichier'],
                 'nombre': actions['nombre_actions']
             },
-            'compatibilite': compatibilite,
+            'compatibilite': compatibility,
             'structure': {
                 'dossiers': structure['dossiers'],
                 'extensions': structure['extensions'],
                 'fichiers': structure['fichiers']
             },
-            'recommandations': self._generer_recommandations(compatibilite, structure)
+            'recommandations': self._generer_recommandations(compatibility, structure)
         }
     
-    def _generer_recommandations(self, compatibilite: Dict, structure: Dict) -> List[str]:
+    def _generer_recommandations(self, compatibility: Dict, structure: Dict) -> List[str]:
         """
-        Générer des recommandations basées sur l'analyse
+        Generate text recommendations based on the analysis results
         """
-        recommandations = []
+        recommendations = []
         
-        if not compatibilite['prepatch_requis']:
-            recommandations.append("⚠️ Script prepatch.sql recommandé pour les vérifications pré-installation")
+        if not compatibility['prepatch_requis']:
+            recommendations.append("⚠️ A prepatch script is highly recommended for pre-installation checks.")
         
-        if not compatibilite['postpatch_requis']:
-            recommandations.append("⚠️ Script postpatch.sql recommandé pour les vérifications post-installation")
+        if not compatibility['postpatch_requis']:
+            recommendations.append("⚠️ A postpatch script is highly recommended for post-installation checks.")
         
-        if 'UNIX' in compatibilite['types_patch'] and not compatibilite['structure_unix_complete']:
-            recommandations.append("🔧 Structure UNIX incomplète (bin/, lib/, ctl/ requis)")
+        if 'UNIX' in compatibility['types_patch'] and not compatibility['structure_unix_complete']:
+            recommendations.append("🔧 Incomplete UNIX structure (bin/, lib/, and ctl/ directories are usually required).")
         
-        if compatibilite['niveau_risque'] == 'élevé':
-            recommandations.append("⚠️ Patch à haut risque - Validation obligatoire avant déploiement")
+        if compatibility['niveau_risque'] == 'high':
+            recommendations.append("⚠️ High-risk patch detected - Mandatory manual validation required before deployment.")
         
-        return recommandations
+        return recommendations

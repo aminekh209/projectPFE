@@ -6,682 +6,680 @@ from collections import defaultdict
 
 class ActionDetector:
     
-    # Patterns SQL avec catégories et sous-types
+    # SQL Patterns with categories and sub-types
     SQL_PATTERNS = {
         # DDL - Structure
         'create_table': {
             'pattern': r'CREATE\s+TABLE\s+(\w+)',
             'categorie': 'DDL',
-            'description': 'Création de table',
-            'format': "Création table {}"
+            'description': 'Table creation',
+            'format': "Table creation {}"
         },
         'alter_table': {
             'pattern': r'ALTER\s+TABLE\s+(\w+)',
             'categorie': 'DDL',
-            'description': 'Modification de table',
-            'format': "Modification table {}"
+            'description': 'Table modification',
+            'format': "Table modification {}"
         },
         'drop_table': {
             'pattern': r'DROP\s+TABLE\s+(\w+)',
             'categorie': 'DDL',
-            'description': 'Suppression de table',
-            'format': "Suppression table {}"
+            'description': 'Table deletion',
+            'format': "Table deletion {}"
         },
         'truncate_table': {
             'pattern': r'TRUNCATE\s+TABLE\s+(\w+)',
             'categorie': 'DDL',
-            'description': 'Vidage de table',
-            'format': "Vidage table {}"
+            'description': 'Table truncation',
+            'format': "Table truncation {}"
         },
         'rename_table': {
             'pattern': r'RENAME\s+TABLE\s+(\w+)\s+TO\s+(\w+)',
             'categorie': 'DDL',
-            'description': 'Renommage de table',
-            'format': "Renommage table {} → {}"
+            'description': 'Table renaming',
+            'format': "Table renaming {} → {}"
         },
         
         # DDL - Index
         'create_index': {
             'pattern': r'CREATE\s+(?:UNIQUE\s+)?INDEX\s+(\w+)\s+ON\s+(\w+)',
             'categorie': 'DDL',
-            'description': 'Création index',
-            'format': "Création index {} sur table {}"
+            'description': 'Index creation',
+            'format': "Index creation {} on table {}"
         },
         'drop_index': {
             'pattern': r'DROP\s+INDEX\s+(\w+)',
             'categorie': 'DDL',
-            'description': 'Suppression index',
-            'format': "Suppression index {}"
+            'description': 'Index deletion',
+            'format': "Index deletion {}"
         },
         
-        # DDL - Vues
+        # DDL - Views
         'create_view': {
             'pattern': r'CREATE\s+(?:OR\s+REPLACE\s+)?VIEW\s+(\w+)',
             'categorie': 'DDL',
-            'description': 'Création vue',
-            'format': "Création vue {}"
+            'description': 'View creation',
+            'format': "View creation {}"
         },
         'drop_view': {
             'pattern': r'DROP\s+VIEW\s+(\w+)',
             'categorie': 'DDL',
-            'description': 'Suppression vue',
-            'format': "Suppression vue {}"
+            'description': 'View deletion',
+            'format': "View deletion {}"
         },
         
-        # DDL - Séquences
+        # DDL - Sequences
         'create_sequence': {
             'pattern': r'CREATE\s+SEQUENCE\s+(\w+)',
             'categorie': 'DDL',
-            'description': 'Création séquence',
-            'format': "Création séquence {}"
+            'description': 'Sequence creation',
+            'format': "Sequence creation {}"
         },
         'drop_sequence': {
             'pattern': r'DROP\s+SEQUENCE\s+(\w+)',
             'categorie': 'DDL',
-            'description': 'Suppression séquence',
-            'format': "Suppression séquence {}"
+            'description': 'Sequence deletion',
+            'format': "Sequence deletion {}"
         },
         
-        # DDL - Synonymes
+        # DDL - Synonyms
         'create_synonym': {
             'pattern': r'CREATE\s+(?:PUBLIC\s+)?SYNONYM\s+(\w+)',
             'categorie': 'DDL',
-            'description': 'Création synonyme',
-            'format': "Création synonyme {}"
+            'description': 'Synonym creation',
+            'format': "Synonym creation {}"
         },
         
-        # DML - Manipulation données
+        # DML - Data Manipulation
         'insert': {
             'pattern': r'INSERT\s+INTO\s+(\w+)',
             'categorie': 'DML',
-            'description': 'Insertion données',
-            'format': "Insertion dans {}"
+            'description': 'Data insertion',
+            'format': "Insertion into {}"
         },
         'update': {
             'pattern': r'UPDATE\s+(\w+)\s+SET',
             'categorie': 'DML',
-            'description': 'Mise à jour données',
-            'format': "Mise à jour {}"
+            'description': 'Data update',
+            'format': "Update on {}"
         },
         'delete': {
             'pattern': r'DELETE\s+FROM\s+(\w+)',
             'categorie': 'DML',
-            'description': 'Suppression données',
-            'format': "Suppression de {}"
+            'description': 'Data deletion',
+            'format': "Deletion from {}"
         },
         'merge': {
             'pattern': r'MERGE\s+INTO\s+(\w+)',
             'categorie': 'DML',
-            'description': 'Fusion données',
-            'format': "Fusion dans {}"
+            'description': 'Data merge',
+            'format': "Merge into {}"
         },
         'upsert': {
             'pattern': r'(?:INSERT\s+OR\s+REPLACE|REPLACE\s+INTO|ON\s+DUPLICATE\s+KEY)',
             'categorie': 'DML',
-            'description': 'Insertion/Mise à jour',
-            'format': "Upsert dans table"
+            'description': 'Insertion/Update (Upsert)',
+            'format': "Upsert in table"
         },
         
         # DCL - Permissions
         'grant': {
             'pattern': r'GRANT\s+([\w\s,]+)\s+ON\s+(\w+)\s+TO\s+(\w+)',
             'categorie': 'DCL',
-            'description': 'Attribution permissions',
-            'format': "Grant {} sur {} à {}"
+            'description': 'Permission grant',
+            'format': "Grant {} on {} to {}"
         },
         'revoke': {
             'pattern': r'REVOKE\s+([\w\s,]+)\s+ON\s+(\w+)\s+FROM\s+(\w+)',
             'categorie': 'DCL',
-            'description': 'Révocation permissions',
-            'format': "Revoke {} sur {} de {}"
+            'description': 'Permission revoke',
+            'format': "Revoke {} on {} from {}"
         },
         
         # TCL - Transactions
         'commit': {
             'pattern': r'^\s*COMMIT\b',
             'categorie': 'TCL',
-            'description': 'Validation transaction',
+            'description': 'Transaction commit',
             'format': "Commit transaction"
         },
         'rollback': {
             'pattern': r'^\s*ROLLBACK\b',
             'categorie': 'TCL',
-            'description': 'Annulation transaction',
+            'description': 'Transaction rollback',
             'format': "Rollback transaction"
         },
         'savepoint': {
             'pattern': r'SAVEPOINT\s+(\w+)',
             'categorie': 'TCL',
-            'description': 'Création point de sauvegarde',
+            'description': 'Savepoint creation',
             'format': "Savepoint {}"
         },
         
-        # Programmation
+        # Programming
         'create_procedure': {
             'pattern': r'CREATE\s+(?:OR\s+REPLACE\s+)?PROCEDURE\s+(\w+)',
             'categorie': 'PLSQL',
-            'description': 'Création procédure',
-            'format': "Création procédure {}"
+            'description': 'Procedure creation',
+            'format': "Procedure creation {}"
         },
         'create_function': {
             'pattern': r'CREATE\s+(?:OR\s+REPLACE\s+)?FUNCTION\s+(\w+)',
             'categorie': 'PLSQL',
-            'description': 'Création fonction',
-            'format': "Création fonction {}"
+            'description': 'Function creation',
+            'format': "Function creation {}"
         },
         'create_package': {
             'pattern': r'CREATE\s+(?:OR\s+REPLACE\s+)?PACKAGE\s+(\w+)',
             'categorie': 'PLSQL',
-            'description': 'Création package',
-            'format': "Création package {}"
+            'description': 'Package creation',
+            'format': "Package creation {}"
         },
         'create_trigger': {
             'pattern': r'CREATE\s+(?:OR\s+REPLACE\s+)?TRIGGER\s+(\w+)',
             'categorie': 'PLSQL',
-            'description': 'Création trigger',
-            'format': "Création trigger {}"
+            'description': 'Trigger creation',
+            'format': "Trigger creation {}"
         },
         'drop_procedure': {
             'pattern': r'DROP\s+PROCEDURE\s+(\w+)',
             'categorie': 'PLSQL',
-            'description': 'Suppression procédure',
-            'format': "Suppression procédure {}"
+            'description': 'Procedure deletion',
+            'format': "Procedure deletion {}"
         },
         
-        # Contraintes
+        # Constraints
         'add_constraint': {
             'pattern': r'ALTER\s+TABLE\s+(\w+)\s+ADD\s+(?:CONSTRAINT\s+(\w+)\s+)?(PRIMARY\s+KEY|FOREIGN\s+KEY|UNIQUE|CHECK)',
             'categorie': 'DDL',
-            'description': 'Ajout contrainte',
-            'format': "Ajout contrainte sur {}"
+            'description': 'Constraint addition',
+            'format': "Add constraint on {}"
         },
         'drop_constraint': {
             'pattern': r'ALTER\s+TABLE\s+(\w+)\s+DROP\s+(?:CONSTRAINT\s+)?(\w+)',
             'categorie': 'DDL',
-            'description': 'Suppression contrainte',
-            'format': "Suppression contrainte sur {}"
+            'description': 'Constraint deletion',
+            'format': "Drop constraint on {}"
         }
     }
     
-    # Patterns Shell avec catégories
+    # Shell Patterns with categories
     SHELL_PATTERNS = {
-        # Gestion fichiers
+        # File management
         'cp': {
             'pattern': r'cp\s+(\S+)\s+(\S+)',
             'categorie': 'FICHIER',
-            'description': 'Copie de fichiers',
-            'format': "Copie {} → {}"
+            'description': 'File copy',
+            'format': "Copy {} → {}"
         },
         'mv': {
             'pattern': r'mv\s+(\S+)\s+(\S+)',
             'categorie': 'FICHIER',
-            'description': 'Déplacement/renommage',
-            'format': "Déplacement {} → {}"
+            'description': 'Move/Rename file',
+            'format': "Move {} → {}"
         },
         'rm': {
             'pattern': r'rm\s+[\s\S]+',
             'categorie': 'FICHIER',
-            'description': 'Suppression fichiers',
-            'format': "Suppression fichiers"
+            'description': 'File deletion',
+            'format': "Delete files"
         },
         'rm_rf': {
             'pattern': r'rm\s+-(?:rf|fr)\s+(\S+)',
             'categorie': 'FICHIER',
-            'description': 'Suppression récursive',
-            'format': "Suppression récursive {}"
+            'description': 'Recursive deletion',
+            'format': "Recursive deletion {}"
         },
         'mkdir': {
             'pattern': r'mkdir\s+(?:-p\s+)?(\S+)',
             'categorie': 'FICHIER',
-            'description': 'Création dossier',
-            'format': "Création dossier {}"
+            'description': 'Directory creation',
+            'format': "Directory creation {}"
         },
         'touch': {
             'pattern': r'touch\s+(\S+)',
             'categorie': 'FICHIER',
-            'description': 'Création fichier',
-            'format': "Création fichier {}"
+            'description': 'File creation',
+            'format': "File creation {}"
         },
         'ln': {
             'pattern': r'ln\s+(?:-s\s+)?(\S+)\s+(\S+)',
             'categorie': 'FICHIER',
-            'description': 'Création lien',
-            'format': "Lien {} → {}"
+            'description': 'Link creation',
+            'format': "Link {} → {}"
         },
         
         # Permissions
         'chmod': {
             'pattern': r'chmod\s+(?:-R\s+)?(\d+|[ugo]+[+-=][rwx]+)\s+(\S+)',
             'categorie': 'PERMISSION',
-            'description': 'Modification permissions',
-            'format': "Permission {} sur {}"
+            'description': 'Permission modification',
+            'format': "Permission {} on {}"
         },
         'chown': {
             'pattern': r'chown\s+(?:-R\s+)?(\S+)\s+(\S+)',
             'categorie': 'PERMISSION',
-            'description': 'Modification propriétaire',
-            'format': "Changement propriétaire {} pour {}"
+            'description': 'Owner modification',
+            'format': "Change owner {} for {}"
         },
         'chgrp': {
             'pattern': r'chgrp\s+(?:-R\s+)?(\S+)\s+(\S+)',
             'categorie': 'PERMISSION',
-            'description': 'Modification groupe',
-            'format': "Changement groupe {} pour {}"
+            'description': 'Group modification',
+            'format': "Change group {} for {}"
         },
         
-        # Services Systemd
+        # Systemd Services
         'systemctl_start': {
             'pattern': r'systemctl\s+start\s+(\S+)',
             'categorie': 'SERVICE_SYSTEMD',
-            'description': 'Démarrage service',
-            'format': "Démarrage service {}"
+            'description': 'Service start',
+            'format': "Start service {}"
         },
         'systemctl_stop': {
             'pattern': r'systemctl\s+stop\s+(\S+)',
             'categorie': 'SERVICE_SYSTEMD',
-            'description': 'Arrêt service',
-            'format': "Arrêt service {}"
+            'description': 'Service stop',
+            'format': "Stop service {}"
         },
         'systemctl_restart': {
             'pattern': r'systemctl\s+restart\s+(\S+)',
             'categorie': 'SERVICE_SYSTEMD',
-            'description': 'Redémarrage service',
-            'format': "Redémarrage service {}"
+            'description': 'Service restart',
+            'format': "Restart service {}"
         },
         'systemctl_reload': {
             'pattern': r'systemctl\s+reload\s+(\S+)',
             'categorie': 'SERVICE_SYSTEMD',
-            'description': 'Rechargement service',
-            'format': "Rechargement service {}"
+            'description': 'Service reload',
+            'format': "Reload service {}"
         },
         'systemctl_enable': {
             'pattern': r'systemctl\s+enable\s+(\S+)',
             'categorie': 'SERVICE_SYSTEMD',
-            'description': 'Activation service',
-            'format': "Activation service {}"
+            'description': 'Service enable',
+            'format': "Enable service {}"
         },
         'systemctl_disable': {
             'pattern': r'systemctl\s+disable\s+(\S+)',
             'categorie': 'SERVICE_SYSTEMD',
-            'description': 'Désactivation service',
-            'format': "Désactivation service {}"
+            'description': 'Service disable',
+            'format': "Disable service {}"
         },
         'systemctl_status': {
             'pattern': r'systemctl\s+status\s+(\S+)',
             'categorie': 'SERVICE_SYSTEMD',
-            'description': 'Statut service',
-            'format': "Vérification statut {}"
+            'description': 'Service status',
+            'format': "Check status {}"
         },
         
-        # Services traditionnels
+        # Traditional Services
         'service_start': {
             'pattern': r'service\s+(\S+)\s+start',
             'categorie': 'SERVICE_SYSV',
-            'description': 'Démarrage service',
-            'format': "Démarrage service {}"
+            'description': 'Service start',
+            'format': "Start service {}"
         },
         'service_stop': {
             'pattern': r'service\s+(\S+)\s+stop',
             'categorie': 'SERVICE_SYSV',
-            'description': 'Arrêt service',
-            'format': "Arrêt service {}"
+            'description': 'Service stop',
+            'format': "Stop service {}"
         },
         'service_restart': {
             'pattern': r'service\s+(\S+)\s+restart',
             'categorie': 'SERVICE_SYSV',
-            'description': 'Redémarrage service',
-            'format': "Redémarrage service {}"
+            'description': 'Service restart',
+            'format': "Restart service {}"
         },
         'service_reload': {
             'pattern': r'service\s+(\S+)\s+reload',
             'categorie': 'SERVICE_SYSV',
-            'description': 'Rechargement service',
-            'format': "Rechargement service {}"
+            'description': 'Service reload',
+            'format': "Reload service {}"
         },
         'service_status': {
             'pattern': r'service\s+(\S+)\s+status',
             'categorie': 'SERVICE_SYSV',
-            'description': 'Statut service',
-            'format': "Vérification statut {}"
+            'description': 'Service status',
+            'format': "Check status {}"
         },
         
         # Compression
         'tar_create': {
             'pattern': r'tar\s+(?:-c|--create).+',
             'categorie': 'ARCHIVE',
-            'description': 'Création archive tar',
-            'format': "Création archive tar"
+            'description': 'Tar archive creation',
+            'format': "Create tar archive"
         },
         'tar_extract': {
             'pattern': r'tar\s+(?:-x|--extract).+',
             'categorie': 'ARCHIVE',
-            'description': 'Extraction archive tar',
-            'format': "Extraction archive tar"
+            'description': 'Tar archive extraction',
+            'format': "Extract tar archive"
         },
         'zip_create': {
             'pattern': r'zip\s+(?:-r\s+)?(\S+)\s+(\S+)',
             'categorie': 'ARCHIVE',
-            'description': 'Création archive zip',
-            'format': "Création {} → {}"
+            'description': 'Zip archive creation',
+            'format': "Create {} → {}"
         },
         'unzip': {
             'pattern': r'unzip\s+(\S+)',
             'categorie': 'ARCHIVE',
-            'description': 'Extraction archive zip',
-            'format': "Extraction {}"
+            'description': 'Zip archive extraction',
+            'format': "Extract {}"
         },
         'gzip': {
             'pattern': r'gzip\s+(\S+)',
             'categorie': 'ARCHIVE',
-            'description': 'Compression gzip',
-            'format': "Compression {}"
+            'description': 'Gzip compression',
+            'format': "Compress {}"
         },
         'gunzip': {
             'pattern': r'gunzip\s+(\S+)',
             'categorie': 'ARCHIVE',
-            'description': 'Décompression gzip',
-            'format': "Décompression {}"
+            'description': 'Gzip decompression',
+            'format': "Decompress {}"
         },
         
-        # Installation paquets
+        # Package installation
         'apt_install': {
             'pattern': r'apt(?:-get)?\s+install\s+(?:-y\s+)?(\S+)',
             'categorie': 'PACKAGE',
-            'description': 'Installation paquet',
-            'format': "Installation {}"
+            'description': 'Package installation',
+            'format': "Install {}"
         },
         'apt_remove': {
             'pattern': r'apt(?:-get)?\s+remove\s+(?:-y\s+)?(\S+)',
             'categorie': 'PACKAGE',
-            'description': 'Suppression paquet',
-            'format': "Suppression {}"
+            'description': 'Package removal',
+            'format': "Remove {}"
         },
         'apt_update': {
             'pattern': r'apt(?:-get)?\s+update',
             'categorie': 'PACKAGE',
-            'description': 'Mise à jour index',
-            'format': "Mise à jour index paquets"
+            'description': 'Package index update',
+            'format': "Update package index"
         },
         'apt_upgrade': {
             'pattern': r'apt(?:-get)?\s+upgrade(?:\s+-y)?',
             'categorie': 'PACKAGE',
-            'description': 'Mise à jour système',
-            'format': "Mise à jour paquets"
+            'description': 'System upgrade',
+            'format': "Upgrade packages"
         },
         'yum_install': {
             'pattern': r'yum\s+install\s+(?:-y\s+)?(\S+)',
             'categorie': 'PACKAGE',
-            'description': 'Installation paquet',
-            'format': "Installation {}"
+            'description': 'Package installation',
+            'format': "Install {}"
         },
         'yum_remove': {
             'pattern': r'yum\s+remove\s+(?:-y\s+)?(\S+)',
             'categorie': 'PACKAGE',
-            'description': 'Suppression paquet',
-            'format': "Suppression {}"
+            'description': 'Package removal',
+            'format': "Remove {}"
         },
         
-        # Édition texte
+        # Text editing
         'sed': {
             'pattern': r'sed\s+(?:-i\s+)?[\'"]([^\'"]+)[\'"]\s+(\S+)',
             'categorie': 'TEXTE',
-            'description': 'Modification texte',
-            'format': "Substitution '{}' dans {}"
+            'description': 'Text modification',
+            'format': "Substitute '{}' in {}"
         },
         'awk': {
             'pattern': r'awk\s+[\'"][^\'"]+[\'"]\s+(\S+)',
             'categorie': 'TEXTE',
-            'description': 'Traitement texte',
-            'format': "Traitement awk sur {}"
+            'description': 'Text processing',
+            'format': "Awk processing on {}"
         },
         'grep': {
             'pattern': r'grep\s+(?:-r\s+)?[\'"]([^\'"]+)[\'"]\s+(\S+)',
             'categorie': 'RECHERCHE',
-            'description': 'Recherche texte',
-            'format': "Recherche '{}' dans {}"
+            'description': 'Text search',
+            'format': "Search '{}' in {}"
         },
         'find': {
             'pattern': r'find\s+(\S+)\s+-name\s+[\'"]([^\'"]+)[\'"]',
             'categorie': 'RECHERCHE',
-            'description': 'Recherche fichiers',
-            'format': "Recherche {} dans {}"
+            'description': 'File search',
+            'format': "Search {} in {}"
         }
     }
     
-    # Patterns Configuration avec catégories
+    # Configuration Patterns with categories
     CONFIG_PATTERNS = {
-        # Base de données
+        # Database
         'datasource_jdbc': {
             'pattern': r'<datasource|<jdbc|jdbc\.|database\.',
             'categorie': 'DATABASE',
-            'description': 'Configuration source de données',
-            'format': "Configuration JDBC Datasource"
+            'description': 'Datasource configuration',
+            'format': "JDBC Datasource configuration"
         },
         'datasource_jndi': {
             'pattern': r'jndi|java:comp/env',
             'categorie': 'DATABASE',
-            'description': 'Configuration JNDI',
-            'format': "Configuration JNDI Datasource"
+            'description': 'JNDI configuration',
+            'format': "JNDI Datasource configuration"
         },
         'connection_pool': {
             'pattern': r'max(?:imum)?-?pool|min(?:imum)?-?pool|connectionTimeout|validationQuery',
             'categorie': 'DATABASE',
-            'description': 'Configuration pool connexions',
-            'format': "Configuration pool de connexions"
+            'description': 'Connection pool configuration',
+            'format': "Connection pool configuration"
         },
         
-        # Réseau
+        # Network
         'port_http': {
             'pattern': r'port\s*=\s*(?:80|8080|8000|8081)|httpPort',
             'categorie': 'RESEAU',
-            'description': 'Configuration port HTTP',
-            'format': "Configuration port HTTP"
+            'description': 'HTTP port configuration',
+            'format': "HTTP port configuration"
         },
         'port_https': {
             'pattern': r'port\s*=\s*(?:443|8443)|httpsPort',
             'categorie': 'RESEAU',
-            'description': 'Configuration port HTTPS',
-            'format': "Configuration port HTTPS"
+            'description': 'HTTPS port configuration',
+            'format': "HTTPS port configuration"
         },
         'port_autres': {
             'pattern': r'port\s*=\s*\d+|port>\d+',
             'categorie': 'RESEAU',
-            'description': 'Configuration port',
-            'format': "Configuration port"
+            'description': 'Port configuration',
+            'format': "Port configuration"
         },
         'host': {
             'pattern': r'host\s*=|serverName|address',
             'categorie': 'RESEAU',
-            'description': 'Configuration hôte',
-            'format': "Configuration hôte"
+            'description': 'Host configuration',
+            'format': "Host configuration"
         },
         
-        # Authentification
+        # Authentication
         'auth_basic': {
             'pattern': r'basic\s+auth|BASIC',
             'categorie': 'AUTH',
-            'description': 'Authentification basique',
-            'format': "Configuration auth basique"
+            'description': 'Basic authentication',
+            'format': "Basic auth configuration"
         },
         'auth_ldap': {
             'pattern': r'ldap|LDAP',
             'categorie': 'AUTH',
-            'description': 'Authentification LDAP',
-            'format': "Configuration LDAP"
+            'description': 'LDAP authentication',
+            'format': "LDAP configuration"
         },
         'auth_kerberos': {
             'pattern': r'kerberos|KRB5',
             'categorie': 'AUTH',
-            'description': 'Authentification Kerberos',
-            'format': "Configuration Kerberos"
+            'description': 'Kerberos authentication',
+            'format': "Kerberos configuration"
         },
         'auth_oauth': {
             'pattern': r'oauth|OAuth|OIDC|openid',
             'categorie': 'AUTH',
-            'description': 'Authentification OAuth',
-            'format': "Configuration OAuth"
+            'description': 'OAuth authentication',
+            'format': "OAuth configuration"
         },
         'credentials': {
             'pattern': r'password|username|user\s*=|credential',
             'categorie': 'AUTH',
-            'description': 'Configuration identifiants',
-            'format': "Configuration credentials"
+            'description': 'Credentials configuration',
+            'format': "Credentials configuration"
         },
         
         # Logging
         'log_level': {
             'pattern': r'log(?:ger)?\.level|log(?:ger)?-level|<level>',
             'categorie': 'LOGGING',
-            'description': 'Configuration niveau logs',
-            'format': "Configuration niveau logging"
+            'description': 'Logging level configuration',
+            'format': "Logging level configuration"
         },
         'log_file': {
             'pattern': r'log(?:ger)?\.file|log(?:ger)?-file|fileHandler',
             'categorie': 'LOGGING',
-            'description': 'Configuration fichier logs',
-            'format': "Configuration fichier logs"
+            'description': 'Log file configuration',
+            'format': "Log file configuration"
         },
         'log_rotation': {
             'pattern': r'rotation|maxFileSize|maxBackup|rolling',
             'categorie': 'LOGGING',
-            'description': 'Configuration rotation logs',
-            'format': "Configuration rotation logs"
+            'description': 'Log rotation configuration',
+            'format': "Log rotation configuration"
         },
         'log_appender': {
             'pattern': r'appender|Appender|<appender',
             'categorie': 'LOGGING',
-            'description': 'Configuration appender logs',
-            'format': "Configuration appender"
+            'description': 'Log appender configuration',
+            'format': "Appender configuration"
         },
         
         # Cache
         'cache_ehcache': {
             'pattern': r'ehcache|Ehcache|<cache',
             'categorie': 'CACHE',
-            'description': 'Configuration Ehcache',
-            'format': "Configuration cache Ehcache"
+            'description': 'Ehcache configuration',
+            'format': "Ehcache configuration"
         },
         'cache_redis': {
             'pattern': r'redis|Redis',
             'categorie': 'CACHE',
-            'description': 'Configuration Redis',
-            'format': "Configuration cache Redis"
+            'description': 'Redis configuration',
+            'format': "Redis cache configuration"
         },
         'cache_memcached': {
             'pattern': r'memcached|Memcached',
             'categorie': 'CACHE',
-            'description': 'Configuration Memcached',
-            'format': "Configuration cache Memcached"
+            'description': 'Memcached configuration',
+            'format': "Memcached cache configuration"
         },
         'cache_parameters': {
             'pattern': r'cache\.|timeToLive|maxEntries|ttl',
             'categorie': 'CACHE',
-            'description': 'Configuration paramètres cache',
-            'format': "Configuration paramètres cache"
+            'description': 'Cache parameters configuration',
+            'format': "Cache parameters configuration"
         },
         
         # Timeout
         'timeout_connection': {
             'pattern': r'connectionTimeout|connectTimeout',
             'categorie': 'TIMEOUT',
-            'description': 'Timeout connexion',
-            'format': "Configuration timeout connexion"
+            'description': 'Connection timeout',
+            'format': "Connection timeout configuration"
         },
         'timeout_request': {
             'pattern': r'requestTimeout|readTimeout|socketTimeout',
             'categorie': 'TIMEOUT',
-            'description': 'Timeout requête',
-            'format': "Configuration timeout requête"
+            'description': 'Request timeout',
+            'format': "Request timeout configuration"
         },
         'timeout_session': {
             'pattern': r'sessionTimeout|session-timeout',
             'categorie': 'TIMEOUT',
-            'description': 'Timeout session',
-            'format': "Configuration timeout session"
+            'description': 'Session timeout',
+            'format': "Session timeout configuration"
         },
         'timeout_transaction': {
             'pattern': r'transactionTimeout|txTimeout',
             'categorie': 'TIMEOUT',
-            'description': 'Timeout transaction',
-            'format': "Configuration timeout transaction"
+            'description': 'Transaction timeout',
+            'format': "Transaction timeout configuration"
         },
         
         # JVM
         'jvm_heap': {
             'pattern': r'Xms|Xmx|-XX:\+HeapDump',
             'categorie': 'JVM',
-            'description': 'Configuration mémoire JVM',
-            'format': "Configuration mémoire JVM"
+            'description': 'JVM memory configuration',
+            'format': "JVM memory configuration"
         },
         'jvm_gc': {
             'pattern': r'GC|GarbageCollection|-XX:\+Use\w+GC',
             'categorie': 'JVM',
-            'description': 'Configuration GC JVM',
-            'format': "Configuration garbage collector"
+            'description': 'JVM GC configuration',
+            'format': "Garbage collector configuration"
         },
         'jvm_arguments': {
             'pattern': r'JAVA_OPTS|JAVA_ARGS|jvmArgs',
             'categorie': 'JVM',
-            'description': 'Arguments JVM',
-            'format': "Configuration arguments JVM"
+            'description': 'JVM arguments',
+            'format': "JVM arguments configuration"
         },
         
-        # Sécurité
+        # Security
         'ssl_tls': {
             'pattern': r'ssl|tls|keystore|truststore|certificate',
             'categorie': 'SECURITE',
-            'description': 'Configuration SSL/TLS',
-            'format': "Configuration SSL/TLS"
+            'description': 'SSL/TLS configuration',
+            'format': "SSL/TLS configuration"
         },
         'cors': {
             'pattern': r'cors|CORS|cross-origin',
             'categorie': 'SECURITE',
-            'description': 'Configuration CORS',
-            'format': "Configuration CORS"
+            'description': 'CORS configuration',
+            'format': "CORS configuration"
         },
         'csrf': {
             'pattern': r'csrf|CSRF|XSRF',
             'categorie': 'SECURITE',
-            'description': 'Configuration CSRF',
-            'format': "Configuration CSRF"
+            'description': 'CSRF configuration',
+            'format': "CSRF configuration"
         }
     }
     
     @staticmethod
     async def detecter_actions_dans_zip(file_content: bytes) -> Dict[str, Any]:
-        """
-        Détecter toutes les actions dans un fichier ZIP (Architecture Streaming optimisée)
-        """
-        actions_globales = []
-        actions_par_fichier = []
-        types_detectes = set()
+        
+        global_actions = []
+        actions_by_file = []
+        detected_types = set()
         categories_stats = defaultdict(int)
         
-        fichiers_presents = []
+        present_files = []
         try:
             zip_file = io.BytesIO(file_content)
             with zipfile.ZipFile(zip_file, 'r') as zip_ref:
                 for zip_info in zip_ref.infolist():
                     if not zip_info.is_dir():
-                        fichiers_presents.append(zip_info.filename)
-                        # ✅ SOLUTION ANTI-CRASH : Utilisation d'un flux (stream) au lieu de tout charger en RAM
+                        present_files.append(zip_info.filename)
+                        
                         with zip_ref.open(zip_info) as f:
                             text_stream = io.TextIOWrapper(f, encoding='utf-8', errors='ignore')
                             
-                            # Détecter les actions dans ce fichier (via le flux)
+                            
                             actions = ActionDetector._detecter_actions_dans_fichier(
                                 zip_info.filename, text_stream
                             )
                         
                         if actions:
-                            actions_par_fichier.append({
+                            actions_by_file.append({
                                 'fichier': zip_info.filename,
                                 'actions': actions
                             })
                             
-                            # Ajouter aux actions globales avec contexte
+                            # Add to global actions with context
                             for action in actions:
-                                actions_globales.append({
+                                global_actions.append({
                                     'description': action['description'],
                                     'categorie': action['categorie'],
                                     'type': action.get('type', 'GENERAL'),
@@ -689,51 +687,50 @@ class ActionDetector:
                                 })
                                 categories_stats[action['categorie']] += 1
                         
-                        # Détecter le type
-                        type_fichier = ActionDetector._detecter_type_fichier(zip_info.filename)
-                        if type_fichier:
-                            types_detectes.add(type_fichier)
+                        
+                        file_type = ActionDetector._detecter_type_fichier(zip_info.filename)
+                        if file_type:
+                            detected_types.add(file_type)
                             
         except Exception as e:
-            raise Exception(f"Erreur détection actions: {str(e)}")
+            raise Exception(f"Action detection error: {str(e)}")
         
+       
         return {
-            'actions_globales': actions_globales,
-            'actions_par_fichier': actions_par_fichier,
-            'fichiers_presents': fichiers_presents,
-            'types_detectes': list(types_detectes),
-            'nombre_actions': len(actions_globales),
+            'actions_globales': global_actions,
+            'actions_par_fichier': actions_by_file,
+            'fichiers_presents': present_files,
+            'types_detectes': list(detected_types),
+            'nombre_actions': len(global_actions),
             'statistiques_categories': dict(categories_stats)
         }
     
     @staticmethod
     def _detecter_actions_dans_fichier(nom_fichier: str, text_stream) -> List[Dict[str, str]]:
-        """
-        Détecter les actions dans un fichier spécifique via flux de texte
-        """
+        
         actions = []
-        # 🔥 1. DÉTECTION STRUCTURELLE (L'action de copier/remplacer le fichier lui-même)
+        # 1. STRUCTURAL DETECTION (File copy/replace action)
         actions.extend(ActionDetector._detecter_actions_structurelles(nom_fichier))
 
-        # 🔥 2. DÉTECTION DU CONTENU (Ce que fait le fichier de l'intérieur)
+        # 2. CONTENT DETECTION (What the file actually executes)
         extension = nom_fichier.split('.')[-1].lower() if '.' in nom_fichier else ''
         
-        # Actions SQL
+        # SQL Actions
         if extension == 'sql':
             actions.extend(ActionDetector._detecter_actions_sql(text_stream))
         
-        # Actions Shell
+        # Shell Actions
         elif extension in ['sh', 'bash']:
             actions.extend(ActionDetector._detecter_actions_shell(text_stream))
         
-        # Actions Configuration
+        # Configuration Actions
         elif extension in ['xml', 'properties', 'conf', 'yml', 'yaml', 'cfg', 'ini']:
             actions.extend(ActionDetector._detecter_actions_config(text_stream))
         
-        # Actions Web
+        # Web Actions
         elif extension in ['war', 'ear', 'jar']:
             actions.append({
-                'description': f"Déploiement application {extension.upper()}",
+                'description': f"Application deployment {extension.upper()}",
                 'categorie': 'APPLICATION',
                 'type': 'WEB'
             })
@@ -742,22 +739,20 @@ class ActionDetector:
 
     @staticmethod
     def _detecter_actions_sql(text_stream) -> List[Dict[str, str]]:
-        """
-        Détecte les actions SQL en gérant intelligemment le multi-lignes avec un buffer.
-        """
-        actions = []
-        actions_vues = set()
-        buffer_instruction = ""
         
-        for ligne in text_stream:
-            # 1. Accumulation du texte (multi-lignes)
-            buffer_instruction += " " + ligne.strip()
+        actions = []
+        seen_actions = set()
+        instruction_buffer = ""
+        
+        for line in text_stream:
             
-            # 2. Une instruction se termine par ';' ou est un mot-clé de transaction
-            if ';' in ligne or ligne.strip().upper().startswith(('COMMIT', 'ROLLBACK')):
-                instruction_upper = buffer_instruction.upper()
+            instruction_buffer += " " + line.strip()
+            
+            
+            if ';' in line or line.strip().upper().startswith(('COMMIT', 'ROLLBACK')):
+                instruction_upper = instruction_buffer.upper()
                 
-                # 3. Test des Regex sur l'instruction COMPLÈTE
+               
                 for action_key, action_info in ActionDetector.SQL_PATTERNS.items():
                     match = re.search(action_info['pattern'], instruction_upper, re.IGNORECASE)
                     if match:
@@ -768,35 +763,33 @@ class ActionDetector:
                         
                         action_key_unique = f"{action_info['categorie']}:{description}"
                         
-                        if action_key_unique not in actions_vues:
-                            actions_vues.add(action_key_unique)
+                        if action_key_unique not in seen_actions:
+                            seen_actions.add(action_key_unique)
                             actions.append({
                                 'description': description,
                                 'categorie': action_info['categorie'],
                                 'type': action_key
                             })
                             
-                # 4. On vide le tampon pour la prochaine instruction
-                buffer_instruction = ""
+                
+                instruction_buffer = ""
                 
         return actions
 
     @staticmethod
     def _detecter_actions_shell(text_stream) -> List[Dict[str, str]]:
-        """
-        Détecter les actions dans un script shell.
-        """
-        actions = []
-        actions_vues = set()
         
-        for ligne in text_stream:
-            ligne = ligne.strip()
-            # Ignorer les commentaires ou lignes vides
-            if ligne.startswith('#') or not ligne:
+        actions = []
+        seen_actions = set()
+        
+        for line in text_stream:
+            line = line.strip()
+            # Ignore comments and empty lines
+            if line.startswith('#') or not line:
                 continue
                 
             for action_key, action_info in ActionDetector.SHELL_PATTERNS.items():
-                match = re.search(action_info['pattern'], ligne)
+                match = re.search(action_info['pattern'], line)
                 if match:
                     try:
                         description = action_info['format'].format(*match.groups()) if match.groups() else action_info['format']
@@ -805,8 +798,8 @@ class ActionDetector:
                     
                     action_key_unique = f"{action_info['categorie']}:{description}"
                     
-                    if action_key_unique not in actions_vues:
-                        actions_vues.add(action_key_unique)
+                    if action_key_unique not in seen_actions:
+                        seen_actions.add(action_key_unique)
                         actions.append({
                             'description': description,
                             'categorie': action_info['categorie'],
@@ -816,19 +809,17 @@ class ActionDetector:
 
     @staticmethod
     def _detecter_actions_config(text_stream) -> List[Dict[str, str]]:
-        """
-        Détecter les actions dans un fichier de configuration.
-        """
+       
         actions = []
-        actions_vues = set()
+        seen_actions = set()
         
-        for ligne in text_stream:
+        for line in text_stream:
             for action_key, action_info in ActionDetector.CONFIG_PATTERNS.items():
-                if re.search(action_info['pattern'], ligne, re.IGNORECASE):
+                if re.search(action_info['pattern'], line, re.IGNORECASE):
                     action_key_unique = f"{action_info['categorie']}:{action_info['description']}"
                     
-                    if action_key_unique not in actions_vues:
-                        actions_vues.add(action_key_unique)
+                    if action_key_unique not in seen_actions:
+                        seen_actions.add(action_key_unique)
                         actions.append({
                             'description': action_info['format'],
                             'categorie': action_info['categorie'],
@@ -840,11 +831,11 @@ class ActionDetector:
     def _detecter_type_fichier(nom_fichier: str) -> str:
         nom_lower = nom_fichier.lower()
         
-        # On vérifie l'UNIX en premier (très important pour ne pas confondre avec DB)
+        # Check UNIX first
         if any(x in nom_lower for x in ['bin/', 'lib/', 'ctl/', 'usr/', 'etc/']):
             return 'UNIX'
             
-        # 🔥 MODIFICATION : DB s'applique aux .sql, .sh, ou s'il y a un dossier /DB/
+        # Check DB
         elif '.sql' in nom_lower or '.sh' in nom_lower or '/db/' in nom_lower or nom_lower.startswith('db/'):
             return 'DB'
             
@@ -858,23 +849,18 @@ class ActionDetector:
     
     @staticmethod
     def _detecter_actions_structurelles(nom_fichier: str) -> List[Dict[str, str]]:
-        """
-        Détecte l'action physique de déploiement d'un fichier (Ajout ou Remplacement)
-        basée sur les arborescences standard UNIX / Linux.
-        """
+      
         actions = []
         
-        # Les répertoires standards UNIX que vous avez mentionnés
-        repertoires_unix = [
+        unix_directories = [
             'usr/bin/', 'usr/sbin/', 'usr/lib/', 'usr/lib64/', 
             'usr/local/', 'usr/share/', 'usr/include/', 'usr/src/',
             'bin/', 'sbin/', 'lib/', 'etc/', 'opt/'
         ]
         
-        # Vérifie si le fichier se trouve dans un de ces dossiers UNIX
-        if any(rep in nom_fichier for rep in repertoires_unix):
+        if any(rep in nom_fichier for rep in unix_directories):
             actions.append({
-                'description': f"Mise à jour / Déploiement du fichier : {nom_fichier}",
+                'description': f"File update / deployment: {nom_fichier}",
                 'categorie': 'DEPLOIEMENT_UNIX',
                 'type': 'REMPLACEMENT_OU_AJOUT'
             })
